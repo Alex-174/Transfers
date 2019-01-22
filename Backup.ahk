@@ -82,7 +82,7 @@ Loop, Files, %FolderPath%\*.*, F
 Gui, access:Add, Button, gOpen x80 y262 w60 h25, Open
 Gui, access:Add, Button, gUpload x140 y262 w60 h25, Upload
 Gui, access:Add, Button, gDownload x200 y262 w60 h25, Download
-Gui, access:Add, Button, vDelete x260 y262 w60 h25, Delete
+Gui, access:Add, Button, gDelete x260 y262 w60 h25, Delete
 Gui, access:Show, w400 h300, Backed up files
 Return
 
@@ -145,6 +145,31 @@ Loop, Files, %FolderPath%\*.*, F
 	LV_Add(, A_LoopFileName, FileAddTime, ListFileSize)
 }
 MsgBox, 0, Upload File, File(s) uploaded!
+Return
+
+Delete:
+LV_GetText(EntryFilename, SelectedRow, 1)
+MsgBox, 4, Delete File, Are you sure you want to delete the file`n"%EntryFilename%"?
+IfMsgBox, Yes
+{
+	FileDelete, %FolderPath%\%EntryFilename%
+	LV_Delete()
+	Loop, Files, %FolderPath%\*.*, F
+	{
+		FileGetTime, FileAddTime, A_LoopFileLongPath, M
+		FileGetSize, FileSize, %A_LoopFileLongPath%, M
+		ListFileSize := FileSize . " MB"
+		If (FileSize = 0) {
+			FileGetSize, FileSize, %A_LoopFileLongPath%, K
+			ListFileSize := FileSize . " KB"
+			If (FileSize = 0) {
+				FileGetSize, FileSize, %A_LoopFileLongPath%
+				ListFileSize := FileSize . "    B"
+			}
+		}
+		LV_Add(, A_LoopFileName, FileAddTime, ListFileSize)
+	}
+}
 Return
 
 selectGuiClose:
