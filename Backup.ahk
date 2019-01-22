@@ -9,29 +9,31 @@ Gui, select:Show, w180
 Return
 
 Select:
+Gui, select:Hide
 If (A_GuiControl = "Select1") {
-	FolderPath := "C:\Users\Public\Backup\"
+	FolderPath := "C:\Users\Public\Backup"
 } else If (A_GuiControl = "Select2") {
-	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup\"
+	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup"
 } else If (A_GuiControl = "Select3") {
-	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup\"
+	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup"
 } else If (A_GuiControl = "Select4") {
-	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup\"
+	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup"
 } else If (A_GuiControl = "Select5") {
-	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup\"
+	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup"
 } else {
 	MsgBox, 0, `t, An error has occurred.`nPlease try again.`n`nIf the problem persists`, talk to Alex.
 }
 If !FileExist(FolderPath) {
 	FileCreateDir, %FolderPath%
+	Sleep, 100
 	FileSetAttrib, +SH, %FolderPath%, 2, 0				;!!!!! For some reason this doesn't work.
 }
-If !FileExist(FolderPath . A_Username) {
-	FileCreateDir, %FolderPath%%A_UserName%
+If !FileExist(FolderPath . "\" . A_Username) {
+	FileCreateDir, %FolderPath%\%A_UserName%
 	Sleep, 100
-	FileSetAttrib, +SH, %FolderPath%%A_UserName%, 2, 0	;!!!!! Yet this does?!
+	FileSetAttrib, +SH, %FolderPath%\%A_UserName%, 2, 0	;!!!!! Yet this does?!
 }
-FolderPath := FolderPath . A_UserName
+FolderPath := FolderPath . "\" . A_UserName
 Gui, access:Default
 Gui, access:Add, ListView, x0 y0 w400 h250 gLVInput AltSubmit NoSortHdr -LV0x10 vFileList, Name|Type|Size
 LV_ModifyCol(1, "200")
