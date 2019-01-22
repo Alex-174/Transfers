@@ -5,7 +5,7 @@ Gui, select:Add, Button, gSelect vSelect2 x60 y80 w20 h20, 2
 Gui, select:Add, Button, gSelect vSelect3 x80 y80 w20 h20, 3
 Gui, select:Add, Button, gSelect vSelect4 x100 y80 w20 h20, 4
 Gui, select:Add, Button, gSelect vSelect5 x120 y80 w20 h20, 5
-Gui, select:Show, w180
+Gui, select:Show, w180, Select Backup
 Return
 
 Select:
@@ -21,49 +21,69 @@ If (A_GuiControl = "Select1") {
 } else If (A_GuiControl = "Select5") {
 	FolderPath := "\\INSERT_COMPURTER_NAME_HERE\Users\Public\Backup"
 } else {
-	MsgBox, 0, `t, An error has occurred.`nPlease try again.`n`nIf the problem persists`, talk to Alex.
+	MsgBox, 0, `t, An error has occurred setting the path.`nPlease try again.`n`nIf the problem persists`, talk to Alex.
+	ExitApp
+}
+If FileExist(FolderPath . "\" . A_UserName . "_pass") {
+	FileRead, ReadBackupPass, %FolderPath%\%A_UserName%_pass
+	If !(ReadBackupPass = "none") {
+		InputBox, InputPass, Open Backup, Please type in the password., HIDE
+		If errorlevel
+			ExitApp
+		OpenPasswordLetters := StrSplit(InputPass)
+		OpenPasswordHash := 1
+		loop, % OpenPasswordLetters.MaxIndex()
+			OpenPasswordHash *= Ord(OpenPasswordLetters[A_Index])
+		If !(ReadBackupPass = OpenPasswordHash) {
+			MsgBox, 0, Open Backup, Incorrect password!
+			ExitApp
+		}
+	}
 }
 If !FileExist(FolderPath) {
 	FileCreateDir, %FolderPath%
 	Sleep, 100
-	FileSetAttrib, +SH, %FolderPath%, 2, 0				;!!!!! For some reason this doesn't work.
+	FileSetAttrib, +SH, %FolderPath%, 2, 0
 }
 If !FileExist(FolderPath . "\" . A_Username) {
-	FileCreateDir, %FolderPath%\%A_UserName%
-	Sleep, 100
-	FileSetAttrib, +SH, %FolderPath%\%A_UserName%, 2, 0	;!!!!! Yet this does?!
+	Gui, createbackup:Add, Text,, You do not have a folder here.`nIt either has yet to be made`,`nor was deleted.`n`nPlease set a password.
+	Gui, createbackup:Add, Text, w150 x25 h20 y80, Type Password:
+	Gui, createbackup:Add, Edit, r1 vPassword1 Password w150 x25 h20 y95
+	Gui, createbackup:Add, Text, w150 x25 h20 y120, Confirm Password:
+	Gui, createbackup:Add, Edit, r1 vPassword2 Password w150 x25 h20 y135
+	Gui, createbackup:Add, Button, gEnterPass w100 x50 h20 y170, Submit Password
+	Gui, createbackup:Add, Button, gNoSetPass w150 x25 h20 y200, Don't set a password
+	Gui, createbackup:-SysMenu +ToolWindow +AlwaysOnTop
+	Gui, createbackup:Show, w200 h230, Setup backup
+	Return
 }
+OpenFolder:
 FolderPath := FolderPath . "\" . A_UserName
 Gui, access:Default
-Gui, access:Add, ListView, x0 y0 w400 h250 gLVInput AltSubmit NoSortHdr -LV0x10 vFileList, Name|Type|Size
+Gui, access:Add, ListView, x0 y0 w400 h250 gLVInput AltSubmit NoSortHdr -LV0x10 vFileList, Name|Added|Size
 LV_ModifyCol(1, "200")
 LV_ModifyCol(2, "100")
 LV_ModifyCol(3, "75 Right")
-Loop, Files, %FolderPath%\*.*, D
-{
-	If InStr(FileExist(A_LoopFileLongPath), "S")
-		Continue
-	LV_Add(, A_LoopFileName, "Folder", "")
-}
 Loop, Files, %FolderPath%\*.*, F
 {
-	If InStr(FileExist(A_LoopFileLongPath), "S")
-		Continue
+	FileGetTime, FileAddTime, A_LoopFileLongPath, M
 	FileGetSize, FileSize, %A_LoopFileLongPath%, M
 	ListFileSize := FileSize . " MB"
 	If (FileSize = 0) {
 		FileGetSize, FileSize, %A_LoopFileLongPath%, K
 		ListFileSize := FileSize . " KB"
-		If (FileSize = 0){
+		If (FileSize = 0) {
 			FileGetSize, FileSize, %A_LoopFileLongPath%
 			ListFileSize := FileSize . "    B"
 		}
 	}
-	LV_Add(, A_LoopFileName, "File", ListFileSize)
+	LV_Add(, A_LoopFileName, FileAddTime, ListFileSize)
 }
-Gui, access:Add, Button, gOpen x70 y262 w60 h25, Open
-Gui, access:Add, Button, gDownload x270 y262 w60 h25, Download
-Gui, access:Show, w400 h300
+Gui, access:Add, Button, gOpen x80 y262 w60 h25, Open
+Gui, access:Add, Button, gUpload x140 y262 w60 h25, Upload
+Gui, access:Add, Button, gDownload x200 y262 w60 h25, Download
+Gui, access:Add, Button, vDelete x260 y262 w60 h25, Delete
+Gui, access:Show, w400 h300, Backed up files
 Return
 
 
@@ -80,21 +100,101 @@ Return
 
 Download:
 LV_GetText(EntryFilename, SelectedRow, 1)
-LV_GetText(DownloadIsFolder, SelectedRow, 2)
-If (DownloadIsFolder = "Folder") {
-	FileCopyDir, %FolderPath%\%EntryFilename%, \\dc1\studnets$\%A_Username%\, 0
-	if ErrorLevel
-		MsgBox, 0, `t, The folder could not be copied.`nThe folder already exists on your account.
-} else if (DownloadIsFolder = "File") {
-	FileCopy, %FolderPath%\%EntryFilename%, \\dc1\studnets$\%A_Username%\, 0
-	if ErrorLevel
-		MsgBox, 0, `t, The file could not be copied.`nThe file already exists on your account.
-} else {
-	MsgBox, 0, `t, An error has occurred.`nPlease try again.`n`nIf the problem persists`, talk to Alex.
+FileCopy, %FolderPath%\%EntryFilename%, \\dc1\studnets$\%A_Username%\, 0
+if ErrorLevel
+	MsgBox, 0, `t, The file could not be copied.`nThe file already exists on your account.
+FileSetAttrib, -SH, %FolderPath%\%EntryFilename%, 0, 0
+Return
+
+Upload:
+FileSelectFile, UploadPathGet, M, \\dc1\students$\%A_Username%\, Select the file(s) to upload.
+If ErrorLevel
+	Return
+Loop, parse, UploadPathGet, `n
+{
+	If (A_Index = "1") {
+		UploadPath := A_LoopField
+		Continue
+	}
+	If FileExist(FolderPath . "\" . A_LoopField) {
+		MsgBox, 4, Upload File, The file already exists.`nOverwrite?
+		IfMsgBox, Yes
+			FileCopy, %UploadPath%\%A_LoopField%, %FolderPath%\*.*, 1
+		else
+			Continue
+	} else {
+		FileCopy, %UploadPath%\%A_LoopField%, %FolderPath%\*.*, 0
+	}
+	FileSetTime, %A_Now%, %FolderPath%\%A_LoopField%, M, 0, 0
+	FileSetAttrib, +SH, %FolderPath%\%A_LoopField%, 0, 0
 }
+LV_Delete()
+Loop, Files, %FolderPath%\*.*, F
+{
+	FileGetTime, FileAddTime, A_LoopFileLongPath, M
+	FileGetSize, FileSize, %A_LoopFileLongPath%, M
+	ListFileSize := FileSize . " MB"
+	If (FileSize = 0) {
+		FileGetSize, FileSize, %A_LoopFileLongPath%, K
+		ListFileSize := FileSize . " KB"
+		If (FileSize = 0) {
+			FileGetSize, FileSize, %A_LoopFileLongPath%
+			ListFileSize := FileSize . "    B"
+		}
+	}
+	LV_Add(, A_LoopFileName, FileAddTime, ListFileSize)
+}
+MsgBox, 0, Upload File, File(s) uploaded!
 Return
 
 selectGuiClose:
 accessGuiClose:
 ExitApp
+Return
+
+
+EnterPass:
+Gui, createbackup:Submit
+If (Password1 = "") {
+	Goto, NoSetPass
+	Return
+}
+If (Password1 = Password2) {
+	PasswordLetters := StrSplit(Password1)
+	PasswordHash := 1
+	loop, % PasswordLetters.MaxIndex()
+		PasswordHash *= Ord(PasswordLetters[A_Index])
+} else {
+	MsgBox, 0, Setup backup., The passwords do not match.`nPlease try again.
+	Gui, createbackup:Show, w200 h230, Setup backup
+	Return
+}
+FileCreateDir, %FolderPath%\%A_UserName%
+FileDelete, %FolderPath%\%A_UserName%_pass
+FileAppend, %PasswordHash%, %FolderPath%\%A_UserName%_pass
+Sleep, 100
+FileSetAttrib, +SH, %FolderPath%\%A_UserName%, 2, 0
+FileSetAttrib, +SH, %FolderPath%\%A_UserName%_pass, 0, 0
+MsgBox, 0, Setup backup, The backup has been created.
+Goto, OpenFolder
+Return
+
+NoSetPass:
+Gui, createbackup:Hide
+MsgBox, 4, Setup backup, Are you sure you don't want a password?`n`nWithout a password`, anyone on your account`ncan access & delete your backups!`n`nThe password protects your backups if`na staff member logs onto your account.
+IfMsgBox, Yes
+{
+	FileCreateDir, %FolderPath%\%A_UserName%
+	FileDelete, %FolderPath%\%A_UserName%_pass
+	FileAppend, none, %FolderPath%\%A_UserName%_pass
+	Sleep, 100
+	FileSetAttrib, +SH, %FolderPath%\%A_UserName%, 2, 0
+	FileSetAttrib, +SH, %FolderPath%\%A_UserName%_pass, 0, 0
+	MsgBox, 0, Setup backup, The backup has been created without a password.
+	Goto, OpenFolder
+	Return
+} else {
+	Gui, createbackup:Show, w200 h230, Setup backup
+	Return
+}
 Return
